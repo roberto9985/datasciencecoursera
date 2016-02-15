@@ -8,6 +8,15 @@ getOutcomeIndex <- function(outcome){
     frame[[outcome]]
 }
 
+## Checks if state is valid by verifying if the
+## provided value is in the list of states from the data file
+isValidState <- function(data, state){
+    ## States is the 7th column
+    states <- unique(data[, 7])
+    state %in% states
+}
+
+## Returns the subset of data specific for the state parameter
 getStateData <- function(data, state, outcomeIndex){
     ## State column index is 7
     stateData <- subset(data, data[, 7] == state)
@@ -15,13 +24,15 @@ getStateData <- function(data, state, outcomeIndex){
     return(stateData)
 }
 
+## Parses the rank of the hospital from the arguments
+## Rank can be any number or strings "best", "worst"
 parseRank <- function(rank, data, outcomeIndex){
     if(rank == "best") return(1)
     if(rank == "worst"){
-        missingValues <- sapply(data[, outcomeIndex], function(value){
-                                    sum(is.na(value))
-                                })
-        length(data[, outcomeIndex]) - missingValues
+        missingValues <- sapply(data[, outcomeIndex], is.na)
+        numberOfMissingValues <- sum(missingValues)
+        print(numberOfMissingValues)
+        return(length(data[, outcomeIndex]) - numberOfMissingValues)
     }
     if(!is.numeric(rank)){
         stop("invalid rank")
@@ -29,13 +40,21 @@ parseRank <- function(rank, data, outcomeIndex){
     return(rank)
 }
 
+## Ranks the hospital by outcome in a state
 rankhospital <- function(state, outcome, num = "best"){
     data <- read.csv("outcome-of-care-measures.csv", colClasses = "character")
-
-    ## TODO: Validate state
-
+    
     outcomeIndex <- getOutcomeIndex(outcome)
+
+    ## Check that state and outcome are valid
+    if(!isValidState(data, state))
+        stop("invalid state")
+    outcomeIndex <- getOutcomeIndex(outcome)
+    if(is.null(outcomeIndex))
+        stop("invalid outcome")
+    
     stateData <- getStateData(data, state, outcomeIndex)
-    orderedData <- stateData[order(stateData[, c(outcomeIndex, 2)]), ]
-    orderedData[seq(1, parseRank(num, data, outcomeIndex)), outcomeIndex]
+    orderedData <- stateData[order(stateData[, outcomeIndex], stateData[, 2]), ]
+    rank <- parseRank(num, stateData, outcomeIndex)
+    orderedData[rank, 2] 
 }
