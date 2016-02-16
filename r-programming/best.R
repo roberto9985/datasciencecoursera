@@ -1,23 +1,9 @@
-## Checks if state is valid by verifying if the
-## provided value is in the list of states from the data file
-isValidState <- function(data, state){
-    ## States is the 7th column
-    states <- unique(data[, 7])
-    state %in% states
-}
-
-## Returns the index of the outcome column by checking in a
-## hardcoded list of known values. If the outcome is not found returns NULL
-getOutcomeIndex <- function(outcome){
-    names <- list("heart attack", "heart failure", "pneumonia")
-    indices <- list(11, 17, 23)
-    frame <- data.frame(indices)
-    names(frame) <- names
-    frame[[outcome]]
-}
-
 ## Finds the best hospital in a state
 best <- function(state, outcome){
+    ## Load the utility functions that validate arguments,
+    ## filter data by state and provide the index of the outcome column
+    source("utils.R")
+    
     ## Read outcome data
     data <- read.csv("outcome-of-care-measures.csv", colClasses = "character")
     
@@ -31,9 +17,7 @@ best <- function(state, outcome){
     ## Return hospital name in that state with lowest 30-day death rate
 
     ## Filter the data by state
-    stateData <- subset(data, data[,7] == state)
-    ## Coerce the target column to numeric
-    stateData[, outcomeIndex] <- as.numeric(stateData[, outcomeIndex])
+    stateData <- getStateData(data, state, outcomeIndex)
     ## Calculate the minimum per state
     minPerState <- min(stateData[, outcomeIndex], na.rm = TRUE)
     ## Order state data by hospital name
