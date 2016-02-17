@@ -4,6 +4,20 @@ validateRank <- function(rank){
         is.numeric(rank)
 }
 
+## Get the hospital ranked with the value of `rank` parameter from
+## all the hospitals of one state.
+getHospitalForState <- function(stateHospitals, outcomeIndex, rank){
+    sorted <- order(stateHospitals[, outcomeIndex], stateHospitals[, 2], na.last = NA)
+    orderedData <- stateHospitals[sorted, ]
+    
+    if(rank == "best")
+        head(orderedData, 1)
+    else if(rank == "worst")
+        tail(orderedData, 1)
+    else
+        orderedData[rank, ]
+}
+
 rankall <- function(outcome, num = "best") {
     ## Load the utility functions that validate arguments,
     ## filter data by state and provide the index of the outcome column
@@ -18,23 +32,23 @@ rankall <- function(outcome, num = "best") {
     outcomeIndex <- getOutcomeIndex(outcome)
     if(is.null(outcomeIndex))
         stop("invalid outcome")
+
+    ## Coerce the `outcomeIndex` column to numeric
+    data[, outcomeIndex] <- suppressWarnings(as.numeric(data[, outcomeIndex]))
+    
+    result <- data.frame()
+    ## Group data by state
+    groupedByState <- split(data, data[, 7])
     
     ## For each state, find the hospital of the given rank
-    result <- data.frame()
-    valuesForEachState <- lapply(split(data,
-                                       data[, 7]),
-                                 function(stateData){
-                                     orderedData <- stateData[order(stateData[, outcomeIndex], stateData[, 2],na.last=NA),]
-                                     if(num == "best")
-                                         head(orderedData, 1)
-                                     else if(num == "worst")
-                                         tail(orderedData, 1)
-                                     else
-                                         orderedData[num, ]
-                                 })
+    valuesForEachState <- lapply(groupedByState, getHospitalForState, outcomeIndex, rank = num)
     result <- do.call(rbind, valuesForEachState)
-    data.frame(hospital = result[, 2], state = result[, 7])
-    ## result[, c(7, 2)]                   
+
+    ## Rename the output columns for readability
+    colnames(result)[2] <- "hospital"
+    colnames(result)[7] <- "state"
+
     ## Return a data frame with the hospital names and the
     ## (abbreviated) state name
+    result[, c(2, 7)]
 }
